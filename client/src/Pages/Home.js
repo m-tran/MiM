@@ -6,6 +6,7 @@ import Card from "../Components/Card";
 import TableList from "../Components/TableList";
 import TableBody from "../Components/TableBody";
 import SearchContent from "../Components/SearchContent";
+import Footer from "../Components/Footer"
 import Axios from "axios";
 import {Col, Row} from 'reactstrap';
 
@@ -15,12 +16,12 @@ const Home = () => {
   const { userData, setUserData } = useContext(UserContext);
   const history = useHistory();
   const indices = ["S&P 500", "NASDAQ", "DIJA", "RUSSELL", "VIX"];
-  const sampleWatch = ["TSLA", "AAPL", "FCEL"];
 
 const [search, setSearch] = useState("");
 // const [quote, setQuote] = useState([]);
 const [error, setError] = useState();
 const [result, setResult] = useState([]);
+const [watchlist, setWatchlist] = useState([]);
 
 const getQuote = (e) =>{
   e.preventDefault();
@@ -29,9 +30,20 @@ const getQuote = (e) =>{
     setResult(res.data);
   });
 }
+
+const renderWatchlist = async () => {
+  await Axios.get("/users/renderWatchlist", {
+    headers: { "x-auth-token": localStorage.getItem("auth-token") },
+  }).then((res) => {
+    setWatchlist(res.data);
+    console.log(res.data);
+  });
+};
     
   useEffect(() => {
     if (!userData.user) history.push("/login");
+    renderWatchlist();
+    console.log(typeof result);
   }, [userData.user, history]);
 
   return (
@@ -47,9 +59,26 @@ const getQuote = (e) =>{
     })}
   </Row>
   <SearchBar onChange={ (e)=>setSearch(e.target.value)} onClick={getQuote}/>
-  {Object.keys(result).map((item)=>{
+  <Row>
+      <Col sm="6">
+      {Object.keys(result).map((item)=>{
     return (
 <Card>
+    <p onClick={async () => {
+                let saveTicker = {
+                  ticker:result.financial.symbol,
+                  name:result.profile.name,
+                  last:result.quote.pc,
+                  high:result.quote.h,
+                  low:result.quote.l,
+                };
+                // adds ticker to watchlist
+                await Axios.post("/users/addWatchlist", saveTicker, {
+                  headers: { "x-auth-token": localStorage.getItem("auth-token") },
+                });
+                console.log("Added to watchlist");
+                renderWatchlist();
+              }}>Add to Watchlist</p>
     <SearchContent 
     ticker={result.financial.symbol}
     name={result.profile.name}
@@ -81,16 +110,34 @@ const getQuote = (e) =>{
   </Card>
     )
   })}
-
-
-  <TableList>
-  {(sampleWatch.map((item, index) => {
+      </Col>
+      <Col sm="6">
+      <TableList>
+  {watchlist.map((item) => {
       return (
-<TableBody key={index} ticker={item} name={item} />
+<TableBody ticker={item.ticker} name={item.name} last={item.last} high={item.high} low={item.low} 
+                        onClick={async () => {
+                          //removes watchlist
+                          await Axios.delete(
+                            `users/remove/${item._id}`,
+                            {
+                              headers: {
+                                "x-auth-token": localStorage.getItem(
+                                  "auth-token"
+                                ),
+                              },
+                            }
+                          );
+                          renderWatchlist();
+                        }}
+/>
       
       )
-    }))}
+    })}
   </TableList>
+      </Col>
+  </Row>
+  <Footer/>
   </>
     );
 };

@@ -1,10 +1,18 @@
-import React, { useState, useEffect } from "react";
 import Axios from "axios";
-import { BrowserRouter, Switch, Route, Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { BrowserRouter, Link, Route, Switch } from "react-router-dom";
+
+import UserContext from "./Context/UserContext";
 import Home from "./Pages/Home";
 import Login from "./Pages/Login";
 import Signup from "./Pages/Signup";
-import UserContext from "./Context/UserContext";
+import Footer from "./Components/Footer";
+import Header from "./Components/Header";
+import Profile from "./Pages/Profile"; 
+import Scanner from "./Pages/Scanner";
+import Callresults from "./Pages/Callresults";
+import Settings from "./Pages/Settings"
+
 // import SignIn from "./Components/SignIn";
 
 function App() {
@@ -37,15 +45,6 @@ function App() {
     }
   };
 
-  const logout = () => {
-    setUserData({
-      token: undefined,
-      user: undefined,
-    });
-
-    localStorage.setItem("auth-token", "");
-  };
-
   useEffect(() => {
     checkLoggedIn();
   }, []);
@@ -53,24 +52,17 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
-        {!userData.user ? (
-          <>
-            <Link to="/signup">Signup</Link>
-            <Link to="/login">Login</Link>
-          </>
-        ) : (
-          <Link to="/login" onClick={logout}>
-            Logout
-          </Link>
-        )}
-
         <UserContext.Provider value={{ userData, setUserData }}>
+        <Header/>
           <Switch>
+           <Route exact path="/" component={Home} />
             <Route path="/login" component={Login} />
             <Route path="/signup" component={Signup} />
             <Route path="/" component={Home} />
+         
           </Switch>
         </UserContext.Provider>
+        {/* <Footer/> */}
       </BrowserRouter>
     </div>
   );

@@ -1,6 +1,8 @@
 const router = require("express").Router();
 const Axios = require("axios");
 const auth = require("../middleware/auth");
+const Quote = require("../models/quoteModel");
+const User = require("../models/userModel");
 //const ProfileRouter = express.Router();
 
 //load Profile
@@ -29,5 +31,61 @@ router.get("/quote/:symbol", async (req,res) => {
       }
     
 })
+
+router.post("/addWatchlist", auth, async (req, res) => {
+  try {
+    const { ticker,name,last,high,low } = req.body;
+
+    //validation
+    if (!ticker || !name || !last || !high || !low )
+      return res.status(400).json({ msg: "Not all fields have been entered." });
+
+    const watchList = new Quote({
+      ticker, name, last, high, low,userId: req.user,
+    });
+    const savedQuote = await watchList.save();
+    res.json(savedQuote);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/renderWatchlist", auth, async (req, res) => {
+  const quote = await Quote.find({ userId: req.user });
+  res.json(quote);
+});
+
+router.delete("/deleteWatchList/:id", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user);
+    const indexToDelete = user.watchList.indexOf(req.body.userId);
+
+    user.watchList.splice(indexToDelete, 1);
+
+    await user.save();
+
+    res.send(user.watchList);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/remove/:id", auth, async (req, res) => {
+  const quote = await Quote.findOne({ userId: req.user, _id: req.params.id });
+  if (!quote)
+    return res
+      .status(400)
+      .json({ msg: "No quote found with this current user." });
+  const deletedQuote = await Quote.findByIdAndDelete(req.params.id);
+  res.json(deletedQuote);
+});
+
+router.patch("/edit/:id", auth, async (req, res) => {
+  const quote = await Quote.findOne({ userId: req.user, _id: req.params.id });
+
+  if (!quote) return res.status(400).json({ msg: "No quote to update." });
+  const updateQuote = await Quote.findByIdAndUpdate(req.params.id, req.body);
+  res.json(updateQuote);
+});
 
 module.exports = router;
